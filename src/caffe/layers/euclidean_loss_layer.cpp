@@ -1,7 +1,9 @@
 #include <vector>
 
-#include "caffe/layers/euclidean_loss_layer.hpp"
+#include "caffe/layer.hpp"
+#include "caffe/util/io.hpp"
 #include "caffe/util/math_functions.hpp"
+#include "caffe/vision_layers.hpp"
 
 namespace caffe {
 
@@ -9,9 +11,11 @@ template <typename Dtype>
 void EuclideanLossLayer<Dtype>::Reshape(
   const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   LossLayer<Dtype>::Reshape(bottom, top);
-  CHECK_EQ(bottom[0]->count(1), bottom[1]->count(1))
-      << "Inputs must have the same dimension.";
-  diff_.ReshapeLike(*bottom[0]);
+  CHECK_EQ(bottom[0]->channels(), bottom[1]->channels());
+  CHECK_EQ(bottom[0]->height(), bottom[1]->height());
+  CHECK_EQ(bottom[0]->width(), bottom[1]->width());
+  diff_.Reshape(bottom[0]->num(), bottom[0]->channels(),
+      bottom[0]->height(), bottom[0]->width());
 }
 
 template <typename Dtype>
@@ -23,9 +27,31 @@ void EuclideanLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       bottom[0]->cpu_data(),
       bottom[1]->cpu_data(),
       diff_.mutable_cpu_data());
-  Dtype dot = caffe_cpu_dot(count, diff_.cpu_data(), diff_.cpu_data());
-  Dtype loss = dot / bottom[0]->num() / Dtype(2);
-  top[0]->mutable_cpu_data()[0] = loss;
+  //Dtype dot = caffe_cpu_dot(count, diff_.cpu_data(), diff_.cpu_data());
+  //Dtype loss = dot / bottom[0]->num() / Dtype(2);
+  //top[0]->mutable_cpu_data()[0] = loss;
+  
+  Dtype accuracy = 0;
+  const Dtype* bottom_data = bottom[0]->cpu_data();
+  const Dtype* bottom_label = bottom[1]->cpu_data();
+  int num = bottom[0]->num();
+  
+  for (int i = 0; i < num; ++i) {
+    // Accuracy
+    float data_x = (-1)*cos(bottom_data[i * 2 + 0])*sin(bottom_data[i * 2 + 1]);
+    float data_y = (-1)*sin(bottom_data[i * 2 + 0]);
+    float data_z = (-1)*cos(bottom_data[i * 2 + 0])*cos(bottom_data[i * 2 + 1]);
+    float norm_data = sqrt(data_x*data_x + data_y*data_y + data_z*data_z);
+    
+    float label_x = (-1)*cos(bottom_label[i * 2 + 0])*sin(bottom_label[i * 2 + 1]);
+    float label_y = (-1)*sin(bottom_label[i * 2 + 0]);
+    float label_z = (-1)*cos(bottom_label[i * 2 + 0])*cos(bottom_label[i * 2 + 1]);
+    float norm_label = sqrt(label_x*label_x + label_y*label_y + label_z*label_z);
+
+    float angle_value = (data_x*label_x+data_y*label_y+data_z*label_z) / (norm_data*norm_label);
+    accuracy += (acos(angle_value)*180)/3.1415926;
+  }
+  top[0]->mutable_cpu_data()[0] = accuracy/num;
 }
 
 template <typename Dtype>
