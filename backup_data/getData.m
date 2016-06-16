@@ -1,5 +1,6 @@
-function Ret_Data = getData(source_dirs)
-%getData returns the data for the participants in the list source_dirs
+function Ret_Data = getData(source_dirs, divider)
+% getData returns 1/divider of the data for the participants in the list 
+% source_dirs
 
 
 for count_d=1:length(source_dirs)
@@ -70,12 +71,18 @@ for count_d=1:length(source_dirs)
         fprintf('Read %d of %d Files in %s\n', num_f, length(files), char(source_dirs(count_d))); 
     end
 
-    Data.data = Data.data/255; %normalize
-    Data.data = single(Data.data); % must be single data, because caffe want float type
+    Data.data = Data.data/255;      %normalize
+    Data.data = single(Data.data);  % must be single data, because caffe want float type
     Data.label = single(Data.label);
     Data.headpose = single(Data.headpose);
     
-    if(length(source_dirs) > 1)
+    % Divides by the dividing factor
+    size(Data.data)
+    Data.data = Data.data(:,:,:,1:divider:end);
+    Data.label = Data.label(1:divider:end);
+    Data.headpose = Data.headpose(1:divider:end);
+    
+    if(count_d > 1)
         Ret_Data.data = cat(4, Ret_Data.data, Data.data);
         Ret_Data.label = cat(2, Ret_Data.label, Data.label);
         Ret_Data.headpose = cat(2, Ret_Data.headpose, Data.headpose);
