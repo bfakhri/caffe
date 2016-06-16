@@ -1,11 +1,11 @@
 %% Script to Perform Calculation of Beta in MMD formula
 
 % Get Source and Target Image Data
-S_all = getData({'p00/', 'p001'}, 3);
+S_all = getData({'p00/', 'p01/', 'p02/', 'p03/', 'p04/', 'p05/', 'p06/', 'p07/', 'p08/'}, 71);
 S_imgs = S_all.data;
 fprintf('Got Source Data\n');
 
-T_all = getData({'p14/'}, 3);
+T_all = getData({'p14/'}, 71);
 T_imgs = T_all.data;
 fprintf('Got Target Data\n');
 
@@ -49,42 +49,37 @@ end
 
 A = zeros(S_length);
 b = zeros(S_length, 1);
-Aeq= A;
-beq = b;
+Aeq= ones(S_length,1);
+beq = 500;
 lb = zeros(S_length, 1);
 ub = ones(S_length, 1);
 %beta = quadprog(double(Kss), double(ksl))
-beta = quadprog(double(Kss), double(ksl), A, b, Aeq, beq, lb, ub);
+%beta = quadprog(double(Kss), double(ksl), A, b, transpose(Aeq), beq, lb, ub);
+K = Kss*2/(S_length^2);
+f = ksl*(-2/(S_length*T_length));
+beta = quadprog(double(K), double(f), [], [], [], [], lb, ub);
 beta_norm = (beta-min(beta))/(max(beta)-min(beta));
 
-
-
-
+%% Save data out to a file
 %{
-flat_src_sub = flat_src(:, 1:11:end);
-s = size(flat_src_sub);
-l = s(2);
+OutData=[];
+%OutData.data = zeros(60,36,1, total_num*2);
+%OutData.label = zeros(2, total_num*2);
+%OutData.headpose = zeros(2, total_num*2);
+%OutData.confidence = zeros(1, total_num*2);
 
-runsum = 0;
-for i=1:l
-    for j=1:l
-        runsum = runsum + distance(flat_src(:,i), flat_src(:,j));
+count = 1;
+for i=1:S_length
+    if(beta(i) > 0.5)
+        OutData.data(:,:,:,count) = S_all.data(:,:,:,i);
+        OutData.label(:,count) = S_all.label(i);
+        OutData.label(count*2) = S_all.label(i+1);
+        OutData.headpose(count*2-1) = S_all.headpose(i);
+        OutData.headpose(count*2) = S_all.headpose(i+1);
     end
-    fprintf('Progress: %d of %d\n', i, l);
 end
 
-epsilon = runsum/(l*l)
-
-%%
-
-%SourceTarget = cat(4, Source, Target);
-
-
-%for j=0:600:length(Source)
-%    for i=0:600:length(Source)
-%        Kss(i/600+1, j/600+1) = gaussianKernel(Source(:,:,:,i/600+1), Source(:,:,:,j/600+1), 1);
-%    end
-%    fprintf('Progress: %d of %d\n', j, length(Source));
-%end
-
+savename = 'mmd_selected_samples.h5';
+% Write out
+hdf5write(savename,'/data', OutData.data, '/label',[OutData.label; OutData.headpose]); 
 %}
