@@ -58,6 +58,7 @@ void MMDEuclideanLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& botto
 template <typename Dtype>
 void MMDEuclideanLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
+  std::cout << "Testing!!!!" << std::endl;
   for (int i = 0; i < 2; ++i) {
     if (propagate_down[i]) {
       const Dtype sign = (i == 0) ? 1 : -1;
