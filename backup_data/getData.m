@@ -68,8 +68,9 @@ for count_d=1:length(source_dirs)
             phi = atan2(Zv(1), Zv(3));
             Data.headpose(:,index) = [theta; (-1)*phi]; % flip the direction
         end
-        fprintf('Read %d of %d Files in %s\n', num_f, length(files), char(source_dirs(count_d))); 
+        %fprintf('Read %d of %d Files in %s\n', num_f, length(files), char(source_dirs(count_d))); 
     end
+    fprintf('Read in File %s\n', char(source_dirs(count_d))); 
 
     Data.data = Data.data/255;      %normalize
     Data.data = single(Data.data);  % must be single data, because caffe want float type
@@ -77,10 +78,10 @@ for count_d=1:length(source_dirs)
     Data.headpose = single(Data.headpose);
     
     % Divides by the dividing factor
-    size(Data.data)
+    %size(Data.data)
     Data.data = Data.data(:,:,:,1:divider:end);
-    Data.label = Data.label(1:divider:end);
-    Data.headpose = Data.headpose(1:divider:end);
+    Data.label = Data.label(:,1:divider:end);
+    Data.headpose = Data.headpose(:,1:divider:end);
     
     if(count_d > 1)
         Ret_Data.data = cat(4, Ret_Data.data, Data.data);

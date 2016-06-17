@@ -2,7 +2,7 @@
 clear;
 clc;
 
-filepath = 'p15/';
+filepath = 'p00/';
  
 path = dir(filepath);
 path = path(3:end);

@@ -1,1 +1,0 @@
-/home/pauli/Gaze/bijcaffe/data/MPIIGaze/H5/p00.h5

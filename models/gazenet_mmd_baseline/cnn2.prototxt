@@ -1,0 +1,227 @@
+name: "MPIIGaze"
+layer {
+  name: "MPII_train_source"
+  type: "HDF5Data"
+  top: "data"
+  top: "label_source"
+  hdf5_data_param {
+    source: "/home/pauli/Gaze/bijcaffe/models/gazenet_mmd/train_source_list.txt"
+    batch_size: 500
+  }
+  include: { phase: TRAIN }
+}
+
+name: "MPIIGaze"
+layer {
+  name: "MPII_train_target"
+  type: "HDF5Data"
+  top: "data"
+  top: "label"
+  hdf5_data_param {
+    source: "/home/pauli/Gaze/bijcaffe/models/gazenet_mmd/train_target_list.txt"
+    batch_size: 500
+  }
+  include: { phase: TRAIN }
+}
+
+
+layer {
+  name: "MPII_test"
+  type: "HDF5Data"
+  top: "data"
+  top: "label"
+  hdf5_data_param {
+    source: "/home/pauli/Gaze/bijcaffe/models/gazenet_mmd/test_list.txt"
+    batch_size: 500
+  }
+  include: { phase: TEST }
+}
+
+layer {
+  name: "cutLabel_source"
+  type: "Slice"
+  bottom: "label_source"
+  top: "gaze_source"
+  top: "headpose_source"
+  slice_param {
+    slice_dim: 1
+    slice_point: 2
+  }
+}
+
+layer {
+  name: "cutLabel_target"
+  type: "Slice"
+  bottom: "label_target"
+  top: "gaze_target"
+  top: "headpose_target"
+  slice_param {
+    slice_dim: 1
+    slice_point: 2
+  }
+}
+
+layer {
+  name: "conv1"
+  type: "Convolution"
+  bottom: "data"
+  top: "conv1"
+  param { #weights
+    lr_mult: 1
+    #decay_mult: 1
+  }
+  param { #bias
+    lr_mult: 2
+    #decay_mult: 0
+  }
+  convolution_param {
+    num_output: 20
+    kernel_size: 5
+    stride: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.1
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+layer {
+  name: "pool1"
+  type: "Pooling"
+  bottom: "conv1"
+  top: "pool1"
+  pooling_param {
+    pool: MAX
+    kernel_size: 2
+    stride: 2
+  }
+}
+
+layer {
+  name: "conv2"
+  type: "Convolution"
+  bottom: "pool1"
+  top: "conv2"
+  param { #weights
+    lr_mult: 1
+    #decay_mult: 1
+  }
+  param { #bias
+    lr_mult: 2
+    #decay_mult: 0
+  }
+  convolution_param {
+    num_output: 50
+    kernel_size: 5
+    stride: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "pool2"
+  type: "Pooling"
+  bottom: "conv2"
+  top: "pool2"
+  pooling_param {
+    pool: MAX
+    kernel_size: 2
+    stride: 2
+  }
+}
+layer {
+  name: "ip1"
+  type: "InnerProduct"
+  bottom: "pool2"
+  top: "ip1"
+  param { #weights
+    lr_mult: 1
+    #decay_mult: 1
+  }
+  param { #bias
+    lr_mult: 2
+    #decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 500
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "relu1"
+  type: "ReLU"
+  bottom: "ip1"
+  top: "ip1"
+}
+
+layer {
+  name: "concat_headpose_eyeappearance"
+  type: "Concat"
+  bottom: "ip1"
+  bottom: "headpose"
+  top: "cat"
+}
+
+
+layer {
+  name: "ip2"
+  type: "InnerProduct"
+  bottom: "cat"
+  top: "ip2"
+  param { #weights
+    lr_mult: 1
+    #decay_mult: 1
+  }
+  param { #bias
+    lr_mult: 2
+    #decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 2
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+layer {
+  name: "accuracy"
+  type: "Accuracy"
+  bottom: "ip2"
+  bottom: "gaze"
+  top: "accuracy"
+  include: { phase: TEST }
+}
+layer {
+  name: "loss"
+  type: "EuclideanLoss"
+  bottom: "ip2"
+  bottom: "gaze_source"
+  bottom: "gaze_target"
+  top: "loss"
+  include: { phase: TRAIN }
+}
+layer {
+  name: "loss"
+  type: "EuclideanLoss"
+  bottom: "ip2"
+  bottom: "gaze"
+  top: "loss"
+  include: { phase: TEST }
+}
