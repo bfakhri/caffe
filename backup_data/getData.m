@@ -78,10 +78,15 @@ for count_d=1:length(source_dirs)
     Data.headpose = single(Data.headpose);
     
     % Divides by the dividing factor
-    %size(Data.data)
-    Data.data = Data.data(:,:,:,1:divider:end);
-    Data.label = Data.label(:,1:divider:end);
-    Data.headpose = Data.headpose(:,1:divider:end);
+    sz = size(Data.data);
+    len = sz(4); 
+    len = idivide(int32(len), int32(divider), 'floor');
+    %Data.data = Data.data(:,:,:,1:divider:end);
+    %Data.label = Data.label(:,1:divider:end);
+    %Data.headpose = Data.headpose(:,1:divider:end);
+    Data.data = Data.data(:,:,:,1:len);
+    Data.label = Data.label(:,1:len);
+    Data.headpose = Data.headpose(:,1:len);
     
     if(count_d > 1)
         Ret_Data.data = cat(4, Ret_Data.data, Data.data);
