@@ -1,0 +1,2 @@
+/home/pauli/Gaze/bijcaffe/data/MPIIGaze/H5/DAG_weighted_1_2_10_0_TS_5.h5
+/home/pauli/Gaze/bijcaffe/data/MPIIGaze/H5/T_train_da_TS_5.h5

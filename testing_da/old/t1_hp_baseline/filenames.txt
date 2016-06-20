@@ -1,0 +1,4 @@
+/home/pauli/Gaze/bijcaffe/data/MPIIGaze/H5/Source_13_6_9_7_T1_weighted_hp.h5
+/home/pauli/Gaze/bijcaffe/data/MPIIGaze/H5/Source_13_6_9_7_T1_unweighted_hp.h5
+/home/pauli/Gaze/bijcaffe/data/MPIIGaze/H5/Target_subject1_10percent_hp.h5
+/home/pauli/Gaze/bijcaffe/data/MPIIGaze/H5/Target_subject1_90percent_hp.h5
