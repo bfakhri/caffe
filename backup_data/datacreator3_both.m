@@ -3,12 +3,12 @@
 %% Randomize Participants to Get Data From 'DA' - DA Group 'T' - Test Subject
 all_subjects = {'p00/', 'p01/', 'p02/', 'p03/', 'p04/', 'p05/', 'p06/', 'p07/', 'p08/', 'p09/', 'p10/', 'p11/', 'p12/', 'p13/', 'p14/'};
 %rnd_list = randperm(15);
-%DA_list = rnd_list(1:4) - 1;
-%T_list = rnd_list(5) - 1;
+%DA_list = rnd_list(1:6) - 1;
+%T_list = rnd_list(7) - 1;
 
 % Specific test subjects
-DA_list = [6, 0, 14, 12];
-T_list = [1];
+DA_list = [7, 8, 13, 11, 1, 9];
+T_list = [2];
 
 fprintf('DA Group: %d\n', DA_list);
 fprintf('Test Subject: %d\n', T_list);
@@ -77,7 +77,7 @@ Kss_headpose = single(zeros(len_da));
 parfor i=1:len_da
     for j=1:len_da
         Kss_data(i,j) = single(gaussianKernel(flat_data(:,i), flat_data(:,j), sigma_data));
-        Kss_headpose(i,j) = single(gaussianKernel(DA_All.headpose(:,i), DA_All.headpose(:,j), sigma_data));
+        Kss_headpose(i,j) = single(gaussianKernel(DA_All.headpose(:,i), DA_All.headpose(:,j), sigma_headpose));
     end
 end
 fprintf('--- Done ---\n');
@@ -130,6 +130,7 @@ Beta_both = zeros(1, len_da);
 count = 1;
 for i=1:len_da
     if(Beta_data(i) > thresh_data && Beta_headpose(i) > thresh_headpose)
+    %if(Beta_headpose(i) > thresh_headpose)
         % Fill out
         Weighted_Samples.data(:,:,:,count) = DA_All.data(:,:,:,i);
         Weighted_Samples.label(:,count) = DA_All.label(:,i);
@@ -144,30 +145,29 @@ fileID = fopen('filenames.txt','w');
 pth = '/home/pauli/Gaze/bijcaffe/data/MPIIGaze/H5/';
 
 % DAG Weighted Samples
-filename = strcat('B-DAG_weighted_', int2str(Percent_Sample), 'percent_', int2str(DA_list(1)), '_', int2str(DA_list(2)), '_', int2str(DA_list(3)), '_', int2str(DA_list(4)), '_TS_', int2str(T_list(1)), '.h5');
+filename = strcat('M-DAG_weighted_', int2str(Percent_Sample), 'percent_', int2str(DA_list(1)), '_', int2str(DA_list(2)), '_', int2str(DA_list(3)), '_', int2str(DA_list(4)), '_', int2str(DA_list(5)), '_', int2str(DA_list(6)), '_TS_', int2str(T_list(1)), '.h5');
 fprintf(fileID, '%s\n', strcat(pth, filename));
 hdf5write(filename,'/data', Weighted_Samples.data, '/label',[Weighted_Samples.label; Weighted_Samples.headpose]); 
 
 % Original DAG Samples (all)
-filename = strcat('B-DAG_All_', int2str(DA_list(1)), '_', int2str(DA_list(2)), '_', int2str(DA_list(3)), '_', int2str(DA_list(4)), '_TS_', int2str(T_list(1)), '.h5');
+filename = strcat('M-DAG_All_', int2str(DA_list(1)), '_', int2str(DA_list(2)), '_', int2str(DA_list(3)), '_', int2str(DA_list(4)), '_', int2str(DA_list(5)), '_', int2str(DA_list(6)), '_TS_', int2str(T_list(1)), '.h5');
 fprintf(fileID, '%s\n', strcat(pth, filename));
 hdf5write(filename,'/data', DA_All.data, '/label',[DA_All.label; DA_All.headpose]); 
 
 % Test Subject DA training subset
-filename = strcat('B-T_train_', int2str(Percent_Sample), 'percent_', 'TS_', int2str(T_list(1)), '.h5');
+filename = strcat('M-T_train_', int2str(Percent_Sample), 'percent_', 'TS_', int2str(T_list(1)), '.h5');
 fprintf(fileID, '%s\n', strcat(pth, filename));
 hdf5write(filename,'/data', T_train_da.data, '/label',[T_train_da.label; T_train_da.headpose]); 
 
 % Test Subject rest leftover of training data after DA training subset
-filename = strcat('B-T_train_', int2str(100-Percent_Sample), 'percent_', 'TS_', int2str(T_list(1)), '.h5');
+filename = strcat('M-T_train_', int2str(100-Percent_Sample), 'percent_', 'TS_', int2str(T_list(1)), '.h5');
 fprintf(fileID, '%s\n', strcat(pth, filename));
 hdf5write(filename,'/data', T_train_rest.data, '/label',[T_train_rest.label; T_train_rest.headpose]); 
 
 % Test Subject testing subset
-filename = strcat('B-T_test_', 'TS_', int2str(T_list(1)), '.h5');
+filename = strcat('M-T_test_', 'TS_', int2str(T_list(1)), '.h5');
 fprintf(fileID, '%s\n', strcat(pth, filename));
 hdf5write(filename,'/data', T_test.data, '/label',[T_test.label; T_test.headpose]); 
 
 fclose(fileID); 
 fprintf('--- Done ---\n');
-
