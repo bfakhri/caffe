@@ -7,8 +7,8 @@ all_subjects = {'p00/', 'p01/', 'p02/', 'p03/', 'p04/', 'p05/', 'p06/', 'p07/', 
 %T_list = rnd_list(7) - 1;
 
 % Specific test subjects
-DA_list = [10 13 9 4];
-T_list = [6];
+DA_list = [9 8 14 5];
+T_list = [0];
 
 fprintf('DA Group: %d\n', DA_list);
 fprintf('Test Subject: %d\n', T_list);
@@ -25,7 +25,7 @@ for Percent_Sample= [5 20 30]
     len_t = size(T_All.data, 4); 
     len_t_half = idivide(len_t, int32(2), 'floor');
 
-    len_t_percent = floor(len_t_half*Percent_Sample/100); % Percentage Here!!!
+    len_t_percent = floor(len_t*Percent_Sample/100); % Percentage Here!!!
 
     % Get training data from test subject
     T_train.data = T_All.data(:,:,:,1:len_t_half);
@@ -33,10 +33,9 @@ for Percent_Sample= [5 20 30]
     T_train.headpose = T_All.headpose(:,1:len_t_half);
 
     % Split training data into the da sample and the rest
-    sub_sample = randperm(len_t_half);
-    T_train_da.data = T_train.data(:,:,:,sub_sample(1:len_t_percent));
-    T_train_da.label = T_train.label(:,sub_sample(1:len_t_percent));
-    T_train_da.headpose = T_train.headpose(:,sub_sample(1:len_t_percent));
+    T_train_da.data = T_train.data(:,:,:,1:len_t_percent);
+    T_train_da.label = T_train.label(:,1:len_t_percent);
+    T_train_da.headpose = T_train.headpose(:,1:len_t_percent);
 
     T_train_rest.data = T_train.data(:,:,:,len_t_percent+1:end);
     T_train_rest.label = T_train.label(:,len_t_percent+1:end);
