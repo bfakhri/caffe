@@ -18,7 +18,8 @@ fprintf('Test Subject: %d\n', T_list);
 DA_All = getData(all_subjects(DA_list+1), 20);
 T_All = getData(all_subjects(T_list+1), 20);
 
-for Percent_Sample= [5 20 30]
+%for Percent_Sample= [5 20 30]
+for Percent_Sample= [20]
     fprintf('\nStarting: %d\n', Percent_Sample);
     % Split Test Subject into several parts
     len_da = size(DA_All.data, 4);
@@ -63,7 +64,7 @@ for Percent_Sample= [5 20 30]
     fprintf('--- Calculating Sigma ---\n');
     sigma_data = 0;
     sigma_headpose = 0;
-    stride = int32(5);
+    stride = int32(1);
 
     flat_data = reshape(DA_All.data, 60*36, []);
     for i=1:stride:len_da
@@ -122,9 +123,9 @@ for Percent_Sample= [5 20 30]
     Beta_data = quadprog(double(K_data), double(f_data), [], [], [], [], lb, ub);
     Beta_headpose = quadprog(double(K_headpose), double(f_headpose), [], [], [], [], lb, ub);
 
-    thresh_data = prctile(Beta_data, 25)
+    thresh_data = prctile(Beta_data, 15)
     %thresh_data = mean(Beta_data);
-    thresh_headpose = prctile(Beta_headpose, 25)
+    thresh_headpose = prctile(Beta_headpose, 50)
     %thresh_headpose = mean(Beta_headpose);
     %fprintf('--- Done ---\n');
     
