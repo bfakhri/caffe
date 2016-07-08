@@ -18,7 +18,7 @@ fprintf('Test Subject: %d\n', T_list);
 DA_All = getData(all_subjects(DA_list+1), 20);
 T_All = getData(all_subjects(T_list+1), 20);
 
-for Percent_Sample= [5]
+for Percent_Sample= [5 20 30]
     fprintf('\nStarting: %d\n', Percent_Sample);
     % Split Test Subject into several parts
     len_da = size(DA_All.data, 4);
@@ -131,29 +131,33 @@ for Percent_Sample= [5]
     fprintf('--- Writing Out to Files ---\n');
 
     % The names of the files are stored here
-    fileID = fopen(strcat(int2str(Percent_Sample),'_filenames.txt'),'w');
+    fileID = fopen(strcat(int2str(Percent_Sample),'p_train_list.txt'),'w');
     pth = '/home/pauli/Gaze/bijcaffe/data/MPIIGaze/H5/';
 
     % DAG Weighted Samples
-    filename = strcat('DAG_weighted_', int2str(Percent_Sample), 'percent_', int2str(DA_list(1)), '_', int2str(DA_list(2)), '_', int2str(DA_list(3)), '_', int2str(DA_list(4)), '_', '_TS_', int2str(T_list(1)), '.h5');
-    fprintf(fileID, '%s\n', strcat(pth, filename));
-    hdf5write(filename,'/data', DA_All.data, '/label',[DA_All.label; DA_All.headpose], '/data_weights', Beta_data_norm, '/hp_weights', Beta_headpose_norm); 
-
+    filename = strcat(int2str(Percent_Sample), 'p_DAG_weighted_', int2str(DA_list(1)), '_', int2str(DA_list(2)), '_', int2str(DA_list(3)), '_', int2str(DA_list(4)), '_', '_TS_', int2str(T_list(1)), '.h5');
+    fprintf(fileID, '%s\n', strcat('./', filename));
+    hdf5write(filename,'/data', DA_All.data, '/label',[DA_All.label; DA_All.headpose], '/data_weights', Beta_data_norm, '/hp_weights', Beta_headpose_norm, '/added_weights', Beta_data_norm+Beta_headpose_norm, '/ones', ones(1, size(DA_All.data, 4)); 
 
     % Test Subject DA training subset
-    filename = strcat('T_train_A', int2str(Percent_Sample), 'percent_', 'TS_', int2str(T_list(1)), '.h5');
-    fprintf(fileID, '%s\n', strcat(pth, filename));
-    hdf5write(filename,'/data', T_train_da.data, '/label',[T_train_da.label; T_train_da.headpose], '/data_weights', ones(1, size(T_train_da.data, 4)), '/hp_weights', ones(1, size(T_train_da.data, 4))); 
-
+    filename = strcat(int2str(Percent_Sample), 'p_T_train_A', '_TS_', int2str(T_list(1)), '.h5');
+    fprintf(fileID, '%s\n', strcat('./', filename));
+    hdf5write(filename,'/data', T_train_da.data, '/label',[T_train_da.label; T_train_da.headpose], '/data_weights', ones(1, size(T_train_da.data, 4)));
+    %hdf5write(filename,'/data', T_train_da.data, '/label',[T_train_da.label; T_train_da.headpose], '/data_weights', ones(1, size(T_train_da.data, 4)), '/hp_weights', ones(1, size(T_train_da.data, 4))); 
+    fclose(fileID);
+    
     % Test Subject rest leftover of training data after DA training subset
-    filename = strcat('T_train_B', int2str(100-Percent_Sample), 'percent_', 'TS_', int2str(T_list(1)), '.h5');
-    fprintf(fileID, '%s\n', strcat(pth, filename));
-    hdf5write(filename,'/data', T_train_rest.data, '/label',[T_train_rest.label; T_train_rest.headpose], '/data_weights', ones(1, size(T_train_rest.data, 4)), '/hp_weights', ones(1, size(T_train_rest.data, 4))) 
+    %filename = strcat('T_train_B', int2str(100-Percent_Sample), 'percent_', 'TS_', int2str(T_list(1)), '.h5');
+    %fprintf(fileID, '%s\n', strcat(pth, filename));
+    %hdf5write(filename,'/data', T_train_rest.data, '/label',[T_train_rest.label; T_train_rest.headpose], '/data_weights', ones(1, size(T_train_rest.data, 4))); 
+    %hdf5write(filename,'/data', T_train_rest.data, '/label',[T_train_rest.label; T_train_rest.headpose], '/data_weights', ones(1, size(T_train_rest.data, 4)), '/hp_weights', ones(1, size(T_train_rest.data, 4))); 
 
+    fileID = fopen(strcat(int2str(Percent_Sample),'p_test_list.txt'),'w');
     % Test Subject testing subset
-    filename = strcat('T_test_', 'TS_', int2str(T_list(1)), '.h5');
-    fprintf(fileID, '%s\n', strcat(pth, filename));
-    hdf5write(filename,'/data', T_test.data, '/label',[T_test.label; T_test.headpose], '/data_weights', ones(1, size(T_test.data, 4)), '/hp_weights', ones(1, size(T_test.data, 4))) 
+    filename = strcat(int2str(Percent_Sample), 'p_T_test_', 'TS_', int2str(T_list(1)), '.h5');
+    fprintf(fileID, '%s\n', strcat('./', filename));
+    hdf5write(filename,'/data', T_test.data, '/label',[T_test.label; T_test.headpose], '/data_weights', ones(1, size(T_test.data, 4)));
+    %hdf5write(filename,'/data', T_test.data, '/label',[T_test.label; T_test.headpose], '/data_weights', ones(1, size(T_test.data, 4)), '/hp_weights', ones(1, size(T_test.data, 4))) 
 
     fclose(fileID); 
     fprintf('--- Done with %d ---\n', Percent_Sample);
