@@ -62,6 +62,7 @@ for Percent_Sample= [5 20 30]
     fprintf('--- Calculating Sigma ---\n');
     sigma_data = 0;
     sigma_headpose = 0;
+    sigma_label = 0; 
     stride = int32(5);
 
     flat_data = reshape(DA_All.data, 60*36, []);
@@ -69,21 +70,25 @@ for Percent_Sample= [5 20 30]
         for j=1:stride:len_da
             sigma_data = sigma_data + distance(flat_data(:, i), flat_data(:,j));
             sigma_headpose = sigma_headpose + distance(DA_All.headpose(:,i), DA_All.headpose(:,j));
+            sigma_label = sigma_label +  distance(DA_All.label(:,i), DA_All.label(:,j));
         end
     end
     sigma_data = sigma_data/((len_da^2)/(double(stride)^2));
     sigma_headpose = sigma_headpose/((len_da^2)/(double(stride)^2));
+    sigam_label = sigma_label/((len_da^2)/(double(stride)^2));
     %fprintf('--- Done ---\n');
 
     %% Find Ks,s - array of kernel distance from all DA source points to all other DA source points
     fprintf('--- Calculating Ks,s ---\n');
     Kss_data = single(zeros(len_da));
     Kss_headpose = single(zeros(len_da));
+    Kss_label = single(zeros(len_da));
 
     parfor i=1:len_da
         for j=1:len_da
             Kss_data(i,j) = single(gaussianKernel(flat_data(:,i), flat_data(:,j), sigma_data));
             Kss_headpose(i,j) = single(gaussianKernel(DA_All.headpose(:,i), DA_All.headpose(:,j), sigma_headpose));
+            Kss_label(i,j) = single(gaussianKernel(DA_All.label(:,i), DA_All.label(:,j), sigma_label));
         end
     end
     %fprintf('--- Done ---\n');
@@ -92,6 +97,7 @@ for Percent_Sample= [5 20 30]
     fprintf('--- Calculating ks,l ---\n');
     ksl_data = zeros(1, len_da);
     ksl_headpose = zeros(1, len_da);
+    ksl_label = zeros(1, len_da);
 
     flat_data_ts = reshape(T_train_da.data, 60*36, []);
 
@@ -99,12 +105,15 @@ for Percent_Sample= [5 20 30]
     parfor s=1:len_da
         data_sum = 0;
         headpose_sum = 0;
+        label_sum = 0; 
         for t=1:len_t
             data_sum = data_sum + gaussianKernel(flat_data(:,s), flat_data_ts(:,t), sigma_data);
             headpose_sum = headpose_sum + gaussianKernel(DA_All.headpose(:,s), T_train_da.headpose(:,t), sigma_headpose);
+            label_sum = label_sum + gaussianKernel(DA_All.label(:,s), T_train_da.label(:,t), sigma_label);
         end
         ksl_data(s) = data_sum;
         ksl_headpose(s) = headpose_sum;
+        ksl_label(s) = label_sum;
     end
     %fprintf('--- Done ---\n');
 
@@ -115,17 +124,24 @@ for Percent_Sample= [5 20 30]
     ub = ones(len_da, 1);
     K_data = Kss_data*2/(len_da^2);
     K_headpose = Kss_headpose*2/(len_da^2);
+    K_label = Kss_label*2/(len_da^2);
     f_data = ksl_data*(-2/(len_da*len_t));
     f_headpose = ksl_headpose*(-2/(len_da*len_t));
+    f_label = ksl_label*(-2/(len_da*len_t));
+    
     
     % Calculate the Betas
     Beta_data = quadprog(double(K_data), double(f_data), [], [], [], [], lb, ub);
     Beta_headpose = quadprog(double(K_headpose), double(f_headpose), [], [], [], [], lb, ub);
+    Beta_label = quadprog(double(K_label), double(f_label), [], [], [], [], lb, ub);
     % Normalize the Betas
     Beta_data_norm = (Beta_data - min(Beta_data))/(max(Beta_data)-min(Beta_data));
     Beta_headpose_norm = (Beta_headpose - min(Beta_headpose))/(max(Beta_headpose)-min(Beta_headpose));
+    Beta_label_norm = (Beta_label - min(Beta_label))/(max(Beta_label)-min(Beta_label));
     
-
+    % Combine Betas w/ multiplication
+    Beta_mult = (Beta_data_norm.*Beta_headpose_norm)*4;
+    
 
     %% Write out data to several files
     fprintf('--- Writing Out to Files ---\n');
@@ -137,12 +153,12 @@ for Percent_Sample= [5 20 30]
     % DAG Weighted Samples
     filename = strcat(int2str(Percent_Sample), 'p_DAG_weighted_', int2str(DA_list(1)), '_', int2str(DA_list(2)), '_', int2str(DA_list(3)), '_', int2str(DA_list(4)), '_', '_TS_', int2str(T_list(1)), '.h5');
     fprintf(fileID, '%s\n', strcat('./', filename));
-    hdf5write(filename,'/data', DA_All.data, '/label',[DA_All.label; DA_All.headpose], '/data_weights', Beta_data_norm, '/hp_weights', Beta_headpose_norm, '/added_weights', Beta_data_norm+Beta_headpose_norm, '/ones', ones(1, size(DA_All.data, 4)); 
+    hdf5write(filename,'/data', DA_All.data, '/label',[DA_All.label; DA_All.headpose], '/data_weights', Beta_data_norm, '/hp_weights', Beta_headpose_norm, '/added_weights', Beta_data_norm+Beta_headpose_norm, '/mult_weights', Beta_mult, '/label_weights', Beta_label, '/ones', ones(1, size(DA_All.data, 4))); 
 
     % Test Subject DA training subset
     filename = strcat(int2str(Percent_Sample), 'p_T_train_A', '_TS_', int2str(T_list(1)), '.h5');
     fprintf(fileID, '%s\n', strcat('./', filename));
-    hdf5write(filename,'/data', T_train_da.data, '/label',[T_train_da.label; T_train_da.headpose], '/data_weights', ones(1, size(T_train_da.data, 4)));
+    hdf5write(filename,'/data', T_train_da.data, '/label',[T_train_da.label; T_train_da.headpose], '/data_weights', ones(1, size(T_train_da.data, 4)), '/hp_weights', ones(1, size(T_train_da.data, 4)), '/added_weights', ones(1, size(T_train_da.data, 4)), '/mult_weights', ones(1, size(T_train_da.data, 4)), '/label_weights', ones(1, size(T_train_da.data, 4)), '/ones', ones(1, size(T_train_da.data, 4))); 
     %hdf5write(filename,'/data', T_train_da.data, '/label',[T_train_da.label; T_train_da.headpose], '/data_weights', ones(1, size(T_train_da.data, 4)), '/hp_weights', ones(1, size(T_train_da.data, 4))); 
     fclose(fileID);
     
@@ -156,7 +172,7 @@ for Percent_Sample= [5 20 30]
     % Test Subject testing subset
     filename = strcat(int2str(Percent_Sample), 'p_T_test_', 'TS_', int2str(T_list(1)), '.h5');
     fprintf(fileID, '%s\n', strcat('./', filename));
-    hdf5write(filename,'/data', T_test.data, '/label',[T_test.label; T_test.headpose], '/data_weights', ones(1, size(T_test.data, 4)));
+    hdf5write(filename,'/data', T_test.data, '/label',[T_test.label; T_test.headpose], '/data_weights', ones(1, size(T_test.data, 4)), '/hp_weights', ones(1, size(T_test.data, 4)), '/added_weights', ones(1, size(T_test.data, 4)), '/mult_weights', ones(1, size(T_test.data, 4)), '/label_weights', ones(1, size(T_test.data, 4)), '/ones', ones(1, size(T_test.data, 4)));
     %hdf5write(filename,'/data', T_test.data, '/label',[T_test.label; T_test.headpose], '/data_weights', ones(1, size(T_test.data, 4)), '/hp_weights', ones(1, size(T_test.data, 4))) 
 
     fclose(fileID); 
