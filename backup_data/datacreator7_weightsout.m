@@ -15,8 +15,8 @@ fprintf('Test Subject: %d\n', T_list);
 
 %% Get Data from MPIIGaze Data Set
 
-DA_All = getData(all_subjects(DA_list+1), 40);
-T_All = getData(all_subjects(T_list+1), 10);
+DA_All = getSamples(all_subjects(DA_list+1), 1000);
+T_All = getData(all_subjects(T_list+1), 1);
 
 for Percent_Sample= [5 20 30]
     fprintf('\nStarting: %d\n', Percent_Sample);
@@ -57,6 +57,8 @@ for Percent_Sample= [5 20 30]
     fprintf('--- T_train_da.data : %d ---\n', s);
     s = size(T_train_rest.data, 4);
     fprintf('--- T_train_rest.data : %d ---\n', s);
+    s = size(T_test.data, 4);
+    fprintf('--- T_test.data : %d ---\n', s);
 
     %% Find Sigma for Kernel Functions
     fprintf('--- Calculating Sigma ---\n');
@@ -75,7 +77,7 @@ for Percent_Sample= [5 20 30]
     end
     sigma_data = sigma_data/((len_da^2)/(double(stride)^2));
     sigma_headpose = sigma_headpose/((len_da^2)/(double(stride)^2));
-    sigam_label = sigma_label/((len_da^2)/(double(stride)^2));
+    sigma_label = sigma_label/((len_da^2)/(double(stride)^2));
     %fprintf('--- Done ---\n');
 
     %% Find Ks,s - array of kernel distance from all DA source points to all other DA source points
@@ -129,19 +131,21 @@ for Percent_Sample= [5 20 30]
     f_headpose = ksl_headpose*(-2/(len_da*len_t));
     f_label = ksl_label*(-2/(len_da*len_t));
     
-    
     % Calculate the Betas
     Beta_data = quadprog(double(K_data), double(f_data), [], [], [], [], lb, ub);
     Beta_headpose = quadprog(double(K_headpose), double(f_headpose), [], [], [], [], lb, ub);
     Beta_label = quadprog(double(K_label), double(f_label), [], [], [], [], lb, ub);
     % Normalize the Betas
     Beta_data_norm = (Beta_data - min(Beta_data))/(max(Beta_data)-min(Beta_data));
+    Beta_data_norm = Beta_data_norm/mean(Beta_data_norm);
     Beta_headpose_norm = (Beta_headpose - min(Beta_headpose))/(max(Beta_headpose)-min(Beta_headpose));
+    Beta_headpose_norm = Beta_headpose_norm/mean(Beta_headpose_norm); 
     Beta_label_norm = (Beta_label - min(Beta_label))/(max(Beta_label)-min(Beta_label));
+    Beta_label_norm = Beta_label_norm/mean(Beta_label_norm); 
     
     % Combine Betas w/ multiplication
-    Beta_mult = (Beta_data_norm.*Beta_headpose_norm)*4;
-    
+    Beta_mult = (Beta_data_norm.*Beta_headpose_norm.*Beta_label_norm);
+    Beta_mult = Beta_mult/mean(Beta_mult);
 
     %% Write out data to several files
     fprintf('--- Writing Out to Files ---\n');
@@ -151,29 +155,24 @@ for Percent_Sample= [5 20 30]
     pth = '/home/pauli/Gaze/bijcaffe/data/MPIIGaze/H5/';
 
     % DAG Weighted Samples
-    filename = strcat(int2str(Percent_Sample), 'p_DAG_weighted_', int2str(DA_list(1)), '_', int2str(DA_list(2)), '_', int2str(DA_list(3)), '_', int2str(DA_list(4)), '_', '_TS_', int2str(T_list(1)), '.h5');
+    filename = strcat(int2str(Percent_Sample), 'p_DAG_weighted','.h5');
+    fprintf(fileID, '#%d\n ', DA_list);
     fprintf(fileID, '%s\n', strcat('./', filename));
     hdf5write(filename,'/data', DA_All.data, '/label',[DA_All.label; DA_All.headpose], '/data_weights', Beta_data_norm, '/hp_weights', Beta_headpose_norm, '/added_weights', Beta_data_norm+Beta_headpose_norm, '/mult_weights', Beta_mult, '/label_weights', Beta_label, '/ones', ones(1, size(DA_All.data, 4))); 
 
     % Test Subject DA training subset
-    filename = strcat(int2str(Percent_Sample), 'p_T_train_A', '_TS_', int2str(T_list(1)), '.h5');
+    filename = strcat(int2str(Percent_Sample), 'p_T_train_A', '.h5');
+    fprintf(fileID, '#%d\n ', T_list);
     fprintf(fileID, '%s\n', strcat('./', filename));
     hdf5write(filename,'/data', T_train_da.data, '/label',[T_train_da.label; T_train_da.headpose], '/data_weights', ones(1, size(T_train_da.data, 4)), '/hp_weights', ones(1, size(T_train_da.data, 4)), '/added_weights', ones(1, size(T_train_da.data, 4)), '/mult_weights', ones(1, size(T_train_da.data, 4)), '/label_weights', ones(1, size(T_train_da.data, 4)), '/ones', ones(1, size(T_train_da.data, 4))); 
-    %hdf5write(filename,'/data', T_train_da.data, '/label',[T_train_da.label; T_train_da.headpose], '/data_weights', ones(1, size(T_train_da.data, 4)), '/hp_weights', ones(1, size(T_train_da.data, 4))); 
     fclose(fileID);
-    
-    % Test Subject rest leftover of training data after DA training subset
-    %filename = strcat('T_train_B', int2str(100-Percent_Sample), 'percent_', 'TS_', int2str(T_list(1)), '.h5');
-    %fprintf(fileID, '%s\n', strcat(pth, filename));
-    %hdf5write(filename,'/data', T_train_rest.data, '/label',[T_train_rest.label; T_train_rest.headpose], '/data_weights', ones(1, size(T_train_rest.data, 4))); 
-    %hdf5write(filename,'/data', T_train_rest.data, '/label',[T_train_rest.label; T_train_rest.headpose], '/data_weights', ones(1, size(T_train_rest.data, 4)), '/hp_weights', ones(1, size(T_train_rest.data, 4))); 
 
     fileID = fopen(strcat(int2str(Percent_Sample),'p_test_list.txt'),'w');
     % Test Subject testing subset
-    filename = strcat(int2str(Percent_Sample), 'p_T_test_', 'TS_', int2str(T_list(1)), '.h5');
+    filename = strcat(int2str(Percent_Sample), 'p_T_test', '.h5');
+    fprintf(fileID, '#%d\n ', T_list);
     fprintf(fileID, '%s\n', strcat('./', filename));
     hdf5write(filename,'/data', T_test.data, '/label',[T_test.label; T_test.headpose], '/data_weights', ones(1, size(T_test.data, 4)), '/hp_weights', ones(1, size(T_test.data, 4)), '/added_weights', ones(1, size(T_test.data, 4)), '/mult_weights', ones(1, size(T_test.data, 4)), '/label_weights', ones(1, size(T_test.data, 4)), '/ones', ones(1, size(T_test.data, 4)));
-    %hdf5write(filename,'/data', T_test.data, '/label',[T_test.label; T_test.headpose], '/data_weights', ones(1, size(T_test.data, 4)), '/hp_weights', ones(1, size(T_test.data, 4))) 
 
     fclose(fileID); 
     fprintf('--- Done with %d ---\n', Percent_Sample);

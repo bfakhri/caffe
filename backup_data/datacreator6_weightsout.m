@@ -15,8 +15,8 @@ fprintf('Test Subject: %d\n', T_list);
 
 %% Get Data from MPIIGaze Data Set
 
-DA_All = getData(all_subjects(DA_list+1), 40);
-T_All = getData(all_subjects(T_list+1), 10);
+DA_All = getSamples(all_subjects(DA_list+1), 100);
+T_All = getSamples(all_subjects(T_list+1), 100);
 
 for Percent_Sample= [5 20 30]
     fprintf('\nStarting: %d\n', Percent_Sample);
@@ -75,7 +75,7 @@ for Percent_Sample= [5 20 30]
     end
     sigma_data = sigma_data/((len_da^2)/(double(stride)^2));
     sigma_headpose = sigma_headpose/((len_da^2)/(double(stride)^2));
-    sigam_label = sigma_label/((len_da^2)/(double(stride)^2));
+    sigma_label = sigma_label/((len_da^2)/(double(stride)^2));
     %fprintf('--- Done ---\n');
 
     %% Find Ks,s - array of kernel distance from all DA source points to all other DA source points
@@ -129,7 +129,6 @@ for Percent_Sample= [5 20 30]
     f_headpose = ksl_headpose*(-2/(len_da*len_t));
     f_label = ksl_label*(-2/(len_da*len_t));
     
-    
     % Calculate the Betas
     Beta_data = quadprog(double(K_data), double(f_data), [], [], [], [], lb, ub);
     Beta_headpose = quadprog(double(K_headpose), double(f_headpose), [], [], [], [], lb, ub);
@@ -159,21 +158,13 @@ for Percent_Sample= [5 20 30]
     filename = strcat(int2str(Percent_Sample), 'p_T_train_A', '_TS_', int2str(T_list(1)), '.h5');
     fprintf(fileID, '%s\n', strcat('./', filename));
     hdf5write(filename,'/data', T_train_da.data, '/label',[T_train_da.label; T_train_da.headpose], '/data_weights', ones(1, size(T_train_da.data, 4)), '/hp_weights', ones(1, size(T_train_da.data, 4)), '/added_weights', ones(1, size(T_train_da.data, 4)), '/mult_weights', ones(1, size(T_train_da.data, 4)), '/label_weights', ones(1, size(T_train_da.data, 4)), '/ones', ones(1, size(T_train_da.data, 4))); 
-    %hdf5write(filename,'/data', T_train_da.data, '/label',[T_train_da.label; T_train_da.headpose], '/data_weights', ones(1, size(T_train_da.data, 4)), '/hp_weights', ones(1, size(T_train_da.data, 4))); 
     fclose(fileID);
-    
-    % Test Subject rest leftover of training data after DA training subset
-    %filename = strcat('T_train_B', int2str(100-Percent_Sample), 'percent_', 'TS_', int2str(T_list(1)), '.h5');
-    %fprintf(fileID, '%s\n', strcat(pth, filename));
-    %hdf5write(filename,'/data', T_train_rest.data, '/label',[T_train_rest.label; T_train_rest.headpose], '/data_weights', ones(1, size(T_train_rest.data, 4))); 
-    %hdf5write(filename,'/data', T_train_rest.data, '/label',[T_train_rest.label; T_train_rest.headpose], '/data_weights', ones(1, size(T_train_rest.data, 4)), '/hp_weights', ones(1, size(T_train_rest.data, 4))); 
 
     fileID = fopen(strcat(int2str(Percent_Sample),'p_test_list.txt'),'w');
     % Test Subject testing subset
     filename = strcat(int2str(Percent_Sample), 'p_T_test_', 'TS_', int2str(T_list(1)), '.h5');
     fprintf(fileID, '%s\n', strcat('./', filename));
     hdf5write(filename,'/data', T_test.data, '/label',[T_test.label; T_test.headpose], '/data_weights', ones(1, size(T_test.data, 4)), '/hp_weights', ones(1, size(T_test.data, 4)), '/added_weights', ones(1, size(T_test.data, 4)), '/mult_weights', ones(1, size(T_test.data, 4)), '/label_weights', ones(1, size(T_test.data, 4)), '/ones', ones(1, size(T_test.data, 4)));
-    %hdf5write(filename,'/data', T_test.data, '/label',[T_test.label; T_test.headpose], '/data_weights', ones(1, size(T_test.data, 4)), '/hp_weights', ones(1, size(T_test.data, 4))) 
 
     fclose(fileID); 
     fprintf('--- Done with %d ---\n', Percent_Sample);
